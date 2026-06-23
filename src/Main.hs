@@ -1,19 +1,22 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main (main) where
 
+import Control.Applicative ((<|>))
 import Control.Exception (IOException, catch)
 import Control.Monad (filterM, forM, unless, when)
 import Crypto.Hash.SHA256 qualified as SHA256
 import Data.Aeson (Value (..), eitherDecodeStrict')
+import Data.Aeson.Key qualified as AesonKey
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteString qualified as BS
-import Data.ByteString.Base16 qualified as Base16
 import Data.ByteString.Char8 qualified as BS8
+import Data.Foldable (toList)
 import Data.List (find, intercalate, isPrefixOf, sort)
-import Data.Maybe (catMaybes, fromMaybe, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Text qualified as Text
-import Data.Text.Encoding qualified as Text
+import Numeric (showHex)
 import System.Directory
   ( canonicalizePath,
     doesDirectoryExist,
@@ -22,13 +25,13 @@ import System.Directory
     getHomeDirectory,
     listDirectory,
   )
+import System.Directory qualified as Directory
 import System.Environment (getArgs, lookupEnv)
 import System.Exit (ExitCode (..), exitFailure, exitSuccess)
 import System.FilePath
   ( (</>),
     dropFileName,
     normalise,
-    splitDirectories,
     takeFileName,
   )
 import System.Process (readProcessWithExitCode)
@@ -173,7 +176,14 @@ direnvFileHash rc = do
   absolute <- canonicalizePath rc
   bytes <- BS.readFile absolute
   let digest = SHA256.hash (BS8.pack absolute <> BS8.pack "\n" <> bytes)
-  pure (BS8.unpack (Base16.encode digest))
+  pure (hex digest)
+
+hex :: BS.ByteString -> String
+hex = concatMap byteHex . BS.unpack
+  where
+    byteHex byte =
+      let rendered = showHex byte ""
+       in if length rendered == 1 then '0' : rendered else rendered
 
 listAllowedEnvrcs :: IO [FilePath]
 listAllowedEnvrcs = do
@@ -234,37 +244,28 @@ nixFlakeNarHash cwd ref = do
 readProcessWithExitCodeIn :: FilePath -> FilePath -> [String] -> String -> IO (ExitCode, String, String)
 readProcessWithExitCodeIn cwd command args input = do
   old <- getCurrentDirectory
-  setCurrentDirectorySafe cwd
+  Directory.setCurrentDirectory cwd
   result <- readProcessWithExitCode command args input `catch` restore old
-  setCurrentDirectorySafe old
+  Directory.setCurrentDirectory old
   pure result
   where
     restore oldDir (errorValue :: IOException) = do
-      setCurrentDirectorySafe oldDir
+      Directory.setCurrentDirectory oldDir
       ioError errorValue
-
-setCurrentDirectorySafe :: FilePath -> IO ()
-setCurrentDirectorySafe = System.Directory.setCurrentDirectory
 
 findStringKey :: Text.Text -> Value -> Maybe String
 findStringKey key value =
   case value of
     Object object ->
-      case KeyMap.lookup (fromTextKey key) object of
+      case KeyMap.lookup (AesonKey.fromText key) object of
         Just (String text) -> Just (Text.unpack text)
         Just nested -> findStringKey key nested
         Nothing -> firstJust (map (findStringKey key) (KeyMap.elems object))
     Array values -> firstJust (map (findStringKey key) (toList values))
     _ -> Nothing
 
-fromTextKey :: Text.Text -> Data.Aeson.KeyMap.Key
-fromTextKey = Data.Aeson.Key.fromText
-
 firstJust :: [Maybe a] -> Maybe a
 firstJust = foldr (<|>) Nothing
-
-toList :: Foldable f => f a -> [a]
-toList = foldr (:) []
 
 data BoringEnvrc = BoringEnvrc
   { normalizedEnvrc :: String,
