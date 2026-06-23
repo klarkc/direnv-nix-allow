@@ -46,10 +46,10 @@ import System.Directory qualified as Directory
 import System.Environment (lookupEnv)
 import System.Exit (ExitCode (..), exitFailure, exitSuccess)
 import System.FilePath
-  ( (</>),
-    dropFileName,
+  ( dropFileName,
     normalise,
     takeFileName,
+    (</>),
   )
 import System.Process (readProcessWithExitCode)
 
@@ -147,7 +147,7 @@ findEnvrc dir = do
 dropTrailingPathSeparatorLike :: FilePath -> FilePath
 dropTrailingPathSeparatorLike path =
   case reverse path of
-    '/':rest -> reverse rest
+    '/' : rest -> reverse rest
     _ -> path
 
 samePath :: FilePath -> FilePath -> IO Bool
