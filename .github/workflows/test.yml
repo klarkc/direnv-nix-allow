@@ -27,8 +27,5 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@v13
 
-      - name: Check flake
+      - name: Check flake, including Cabal tests
         run: nix flake check --show-trace --print-build-logs --verbose --accept-flake-config
-
-      - name: Run Cabal tests
-        run: nix develop --accept-flake-config -c cabal test all
