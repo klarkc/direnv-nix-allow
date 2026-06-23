@@ -71,13 +71,4 @@ in
   checks = (projectFlake.checks or { }) // {
     inherit package test formatting pre-commit-check;
   };
-
-  hydraJobs = {
-    required = pkgs.releaseTools.aggregate {
-      name = "required";
-      constituents = lib.collect lib.isDerivation {
-        inherit package test formatting pre-commit-check;
-      };
-    };
-  };
 }
