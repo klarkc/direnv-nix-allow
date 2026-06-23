@@ -1,0 +1,8 @@
+cradle:
+  cabal:
+    - path: "./src/DirenvNixAllow.hs"
+      component: "lib:direnv-nix-allow"
+    - path: "./src/Main.hs"
+      component: "exe:direnv-nix-allow"
+    - path: "./tests"
+      component: "test:direnv-nix-allow-test"
