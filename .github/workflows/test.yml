@@ -20,3 +20,6 @@ jobs:
 
       - name: Check flake
         run: nix flake check --show-trace --print-build-logs --verbose --accept-flake-config
+
+      - name: Run Cabal tests
+        run: nix develop --accept-flake-config -c cabal test all
