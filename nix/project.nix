@@ -1,4 +1,4 @@
-{ inputs, pkgs, lib }:
+{ pkgs, lib }:
 
 pkgs.haskell-nix.cabalProject' ({ ... }: {
   name = "direnv-nix-allow";
@@ -7,10 +7,6 @@ pkgs.haskell-nix.cabalProject' ({ ... }: {
 
   flake.variants = {
     ghc967 = { };
-  };
-
-  inputMap = {
-    "https://chap.intersectmbo.org/" = inputs.CHaP;
   };
 
   modules = [
