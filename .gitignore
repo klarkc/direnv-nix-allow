@@ -6,3 +6,4 @@ result-*
 *.o
 *.dyn_hi
 *.dyn_o
+.pre-commit-config.yaml
