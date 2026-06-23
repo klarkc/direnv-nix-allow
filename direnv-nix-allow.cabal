@@ -1,44 +1,44 @@
 cabal-version: 3.8
-
-name: direnv-nix-allow
-version: 0.1.0.0
-synopsis: Nix-aware direnv approval reuse
-license: NONE
-author: klarkc
-maintainer: klarkc
-build-type: Simple
+name:          direnv-nix-allow
+version:       0.1.0.0
+synopsis:      Nix-aware direnv approval reuse
+license:
+author:        klarkc
+maintainer:    klarkc
+build-type:    Simple
 
 common warnings
   ghc-options: -Wall
 
 common dependencies
   build-depends:
-      aeson
-    , base >= 4.16 && < 5
+    , aeson
+    , base               >=4.16 && <5
     , bytestring
     , cryptohash-sha256
     , directory
     , filepath
     , process
     , text
+
   default-language: Haskell2010
 
 library
-  import: warnings, dependencies
-  hs-source-dirs: src
+  import:          warnings, dependencies
+  hs-source-dirs:  src
   exposed-modules: DirenvNixAllow
 
 executable direnv-nix-allow
-  import: warnings, dependencies
+  import:         warnings, dependencies
   hs-source-dirs: src
-  main-is: Main.hs
-  build-depends: direnv-nix-allow
+  main-is:        Main.hs
+  build-depends:  direnv-nix-allow
 
 test-suite direnv-nix-allow-test
-  import: warnings, dependencies
-  type: exitcode-stdio-1.0
+  import:         warnings, dependencies
+  type:           exitcode-stdio-1.0
   hs-source-dirs: tests
-  main-is: Spec.hs
+  main-is:        Spec.hs
   build-depends:
-      HUnit
     , direnv-nix-allow
+    , HUnit
