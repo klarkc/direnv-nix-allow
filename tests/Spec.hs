@@ -27,15 +27,18 @@ main = do
 tests :: Test
 tests =
   TestList
-    [ TestLabel "minimal envrc" testMinimalEnvrc,
-      TestLabel "watch file envrc" testWatchFileEnvrc,
-      TestLabel "normalization" testNormalization,
-      TestLabel "rejected envrc scenarios" testRejectedEnvrcs,
-      TestLabel "flake ref parsing" testParseFlakeRef,
-      TestLabel "allowed line predicate" testAllowedLines,
-      TestLabel "direnv hash" testDirenvHash,
-      TestLabel "narHash extraction" testNarHashExtraction
+    [ labeled "minimal envrc" testMinimalEnvrc,
+      labeled "watch file envrc" testWatchFileEnvrc,
+      labeled "normalization" testNormalization,
+      labeled "rejected envrc scenarios" testRejectedEnvrcs,
+      labeled "flake ref parsing" testParseFlakeRef,
+      labeled "allowed line predicate" testAllowedLines,
+      labeled "direnv hash" testDirenvHash,
+      labeled "narHash extraction" testNarHashExtraction
     ]
+
+labeled :: String -> Assertion -> Test
+labeled name assertion = TestLabel name (TestCase assertion)
 
 testMinimalEnvrc :: Assertion
 testMinimalEnvrc = do
