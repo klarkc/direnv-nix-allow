@@ -24,8 +24,8 @@ let
     };
   };
 
-  package = project.hsPkgs.direnv-nix-allow.components.exes.direnv-nix-allow;
-  test = project.hsPkgs.direnv-nix-allow.components.tests.direnv-nix-allow-test;
+  package = project.hsPkgs."direnv-nix-allow".components.exes."direnv-nix-allow";
+  test = project.hsPkgs."direnv-nix-allow".components.tests."direnv-nix-allow-test";
 
   formatting = pkgs.runCommand "formatting-check" { nativeBuildInputs = [ formatter ]; } ''
     cp -r ${lib.cleanSource ../.} source
@@ -68,7 +68,7 @@ in
     program = "${package}/bin/direnv-nix-allow";
   };
 
-  checks = projectFlake.checks or { } // {
+  checks = (projectFlake.checks or { }) // {
     inherit package test formatting pre-commit-check;
   };
 
