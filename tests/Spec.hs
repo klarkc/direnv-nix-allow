@@ -3,12 +3,14 @@
 
 module Main (main) where
 
+import Control.Exception (IOException, try)
 import Data.Aeson (eitherDecodeStrict')
 import Data.ByteString.Char8 qualified as BS8
 import DirenvNixAllow
   ( BoringEnvrc (..),
     direnvFileHashFromBytes,
     findStringKey,
+    isAllowedLine,
     normalizeLine,
     parseBoringEnvrc,
     parseFlakeRef,
@@ -28,7 +30,9 @@ tests =
     [ TestLabel "minimal envrc" testMinimalEnvrc,
       TestLabel "watch file envrc" testWatchFileEnvrc,
       TestLabel "normalization" testNormalization,
+      TestLabel "rejected envrc scenarios" testRejectedEnvrcs,
       TestLabel "flake ref parsing" testParseFlakeRef,
+      TestLabel "allowed line predicate" testAllowedLines,
       TestLabel "direnv hash" testDirenvHash,
       TestLabel "narHash extraction" testNarHashExtraction
     ]
@@ -54,12 +58,36 @@ testNormalization = do
   assertEqual "normalized envrc" "use flake .#dev" (normalizedEnvrc parsed)
   assertEqual "flake ref" ".#dev" (flakeRef parsed)
 
+testRejectedEnvrcs :: Assertion
+testRejectedEnvrcs = do
+  assertParseFails ""
+  assertParseFails "foo\nuse flake\n"
+  assertParseFails "use flake --impure\n"
+  assertParseFails "use flake\nuse flake .#dev\n"
+  assertParseFails "watch_file package.json\nuse flake\n"
+
+assertParseFails :: String -> Assertion
+assertParseFails input = do
+  result <- try (parseBoringEnvrc input) :: IO (Either IOException BoringEnvrc)
+  case result of
+    Left _ -> pure ()
+    Right parsed -> assertFailure ("expected parse failure, got: " <> show parsed)
+
 testParseFlakeRef :: Assertion
 testParseFlakeRef = do
   assertEqual "default ref" "." (parseFlakeRef ["use", "flake"])
   assertEqual "explicit ref" ".#dev" (parseFlakeRef ["use", "flake", ".#dev"])
   assertEqual "flag before ref" ".#dev" (parseFlakeRef ["use", "flake", "--no-write-lock-file", ".#dev"])
   assertEqual "flag after ref" ".#dev" (parseFlakeRef ["use", "flake", ".#dev", "--no-write-lock-file"])
+
+testAllowedLines :: Assertion
+testAllowedLines = do
+  assertBool "use flake" (isAllowedLine "use flake")
+  assertBool "use flake ref" (isAllowedLine "use flake .#dev")
+  assertBool "watch flake.nix" (isAllowedLine "watch_file flake.nix")
+  assertBool "watch flake.lock" (isAllowedLine "watch_file flake.lock")
+  assertBool "reject arbitrary command" (not (isAllowedLine "foo"))
+  assertBool "reject extra watch file" (not (isAllowedLine "watch_file package.json"))
 
 testDirenvHash :: Assertion
 testDirenvHash = do
