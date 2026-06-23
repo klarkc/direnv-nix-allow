@@ -16,11 +16,6 @@
       flake = false;
     };
 
-    CHaP = {
-      url = "github:IntersectMBO/cardano-haskell-packages?ref=repo";
-      flake = false;
-    };
-
     iohk-nix = {
       url = "github:input-output-hk/iohk-nix";
       inputs.nixpkgs.follows = "nixpkgs";
