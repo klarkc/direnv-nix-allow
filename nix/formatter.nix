@@ -18,11 +18,11 @@ pkgs.writeShellApplication {
       -path ./.git -prune -o \
       -path ./.direnv -prune -o \
       -path ./dist-newstyle -prune -o \
-      -name '*.nix' -print \
-      | xargs -r nixpkgs-fmt
+      -name '*.nix' -print0 \
+      | xargs -0 -r nixpkgs-fmt
 
     find src tests \
-      -name '*.hs' -print \
-      | xargs -r fourmolu --mode inplace
+      -name '*.hs' -print0 \
+      | xargs -0 -r fourmolu --mode inplace
   '';
 }
