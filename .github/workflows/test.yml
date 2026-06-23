@@ -8,7 +8,16 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: x86_64-linux
+            os: ubuntu-latest
+          - name: aarch64-linux
+            os: ubuntu-24.04-arm
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v5
 
