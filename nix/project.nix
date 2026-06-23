@@ -1,20 +1,21 @@
-{ repoRoot, pkgs, lib, ... }:
-let
+{ inputs, pkgs, lib }:
+
+pkgs.haskell-nix.cabalProject' ({ ... }: {
   name = "direnv-nix-allow";
-in
-lib.iogx.mkHaskellProject {
-  cabalProject = pkgs.haskell-nix.cabalProject' {
-    inherit name;
-    src = ../.;
-    compiler-nix-name = lib.mkDefault "ghc96";
+  src = lib.cleanSource ../.;
+  compiler-nix-name = lib.mkDefault "ghc967";
+
+  flake.variants = {
+    ghc967 = { };
   };
 
-  shellArgs = _: {
-    name = "${name}-shell";
-    packages = with pkgs; [
-      cabal-install
-      direnv
-      hlint
-    ];
+  inputMap = {
+    "https://chap.intersectmbo.org/" = inputs.CHaP;
   };
-}
+
+  modules = [
+    {
+      packages = { };
+    }
+  ];
+})
