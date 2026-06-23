@@ -1,4 +1,4 @@
-{ pkgs, lib }:
+{ inputs ? null, pkgs, lib }:
 
 pkgs.haskell-nix.cabalProject' ({ ... }: {
   name = "direnv-nix-allow";
