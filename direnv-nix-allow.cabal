@@ -1,0 +1,27 @@
+cabal-version: 3.6
+
+name: direnv-nix-allow
+version: 0.1.0.0
+synopsis: Nix-aware direnv approval reuse
+license: NONE
+author: klarkc
+maintainer: klarkc
+build-type: Simple
+
+common warnings
+  ghc-options: -Wall
+
+executable direnv-nix-allow
+  import: warnings
+  hs-source-dirs: src
+  main-is: Main.hs
+  default-language: Haskell2010
+  build-depends:
+      aeson
+    , base >= 4.16 && < 5
+    , bytestring
+    , cryptohash-sha256
+    , directory
+    , filepath
+    , process
+    , text
