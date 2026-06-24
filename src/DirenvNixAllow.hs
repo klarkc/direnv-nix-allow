@@ -306,10 +306,11 @@ stripComment :: String -> String
 stripComment = go True
   where
     go _ [] = []
-    go _ ('#' : _) = []
-    go previousWasSpace (char : rest)
-        | char == '#' && previousWasSpace = []
-        | otherwise = char : go (isSpace char) rest
+    go atLineStart ('#' : _)
+        | atLineStart = []
+    go previousWasSpace ('#' : _)
+        | previousWasSpace = []
+    go _ (char : rest) = char : go (isSpace char) rest
 
 isAllowedLine :: String -> Bool
 isAllowedLine line =
