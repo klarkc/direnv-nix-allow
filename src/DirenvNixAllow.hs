@@ -29,6 +29,7 @@ import Data.Aeson.Key qualified as AesonKey
 import Data.Aeson.KeyMap qualified as KeyMap
 import Data.ByteString qualified as BS
 import Data.ByteString.Char8 qualified as BS8
+import Data.Char (isSpace)
 import Data.Foldable (toList)
 import Data.List (find, intercalate, isPrefixOf, sort)
 import Data.Maybe (catMaybes, fromMaybe)
@@ -299,7 +300,16 @@ parseBoringEnvrc content = do
         _ -> ioError (userError "multiple use flake lines are not supported")
 
 normalizeLine :: String -> String
-normalizeLine = unwords . words . takeWhile (/= '#')
+normalizeLine = unwords . words . stripComment
+
+stripComment :: String -> String
+stripComment = go True
+  where
+    go _ [] = []
+    go _ ('#' : _) = []
+    go previousWasSpace (char : rest)
+        | char == '#' && previousWasSpace = []
+        | otherwise = char : go (isSpace char) rest
 
 isAllowedLine :: String -> Bool
 isAllowedLine line =
