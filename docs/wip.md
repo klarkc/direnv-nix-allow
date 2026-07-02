@@ -84,12 +84,9 @@ The test suite in `tests/Spec.hs` covers:
 
 ## Recent failure fixed
 
-`nix flake check` failed in the HUnit suite because `normalizeLine` previously used `takeWhile (/= '#')`, which truncated flake refs:
+Fixed in commits `e60ab00` and `3040dfe`. The `normalizeLine` function no longer uses `takeWhile (/= '#')`; it preserves `#` inside tokens and strips only shell-style comments that start at line start or after whitespace.
 
-- expected `.#ci`, got `.`;
-- expected `use flake .#dev`, got `use flake .`.
-
-The intended fix is to preserve `#` inside tokens and strip only shell-style comments that start at line start or after whitespace.
+Validation: `nix flake check` exits 0 on `main` as of 2026-07-02, with only expected non-fatal warnings.
 
 ## Known non-fatal warnings
 
@@ -111,17 +108,70 @@ PRE_COMMIT_ALLOW_NO_CONFIG=1 git commit ...
 
 or uninstall/reinstall the hook from the current shell. Do not commit `.pre-commit-config.yaml` unless the project policy changes.
 
-## Next recommended steps
+## Validation record
 
-1. Pull latest `main`.
-2. Run `nix fmt`.
-3. Run `nix flake check`.
-4. If formatting changes files, commit them with `Run nix fmt`.
-5. If `nix flake check` fails, inspect the exact failing derivation log with `nix log <drv>`.
+- **2026-07-02**: `nix fmt` → no changes. `nix flake check` → exit 0; running checks passed, and package/app/devShell/formatter outputs evaluated successfully. Only expected non-fatal warnings.
+
+## Design decision: external interface preference
+
+Prefer external interfaces in this order when they are available, stable, and cheap enough:
+
+1. CLI interface;
+2. code/API interface;
+3. direct file interface.
+
+This is a preference, not an absolute rule. Use direct file access when the file is the documented source of truth or there is no adequate CLI/API. In this project that means:
+
+- keep using the `nix` CLI for Nix facts and behavior, because the CLI is the user-visible contract shared with direnv workflows;
+- keep using the `direnv` CLI to materialize approval (`direnv allow <path>`), so direnv remains the authority for writes;
+- keep reading direnv allow files for discovery, because the current implementation needs to enumerate already allowed `.envrc` paths and there is no known `direnv` CLI that exposes this exact list as a stable query.
+
+No broad refactor is needed for this rule. Existing Nix and direnv write paths already follow it; only the `system=default` identity placeholder should be replaced.
+
+## Next implementation decision: real Nix system identity
+
+Replace the identity line:
+
+```text
+system=default
+```
+
+with the configured Nix system from the Nix CLI:
+
+```sh
+nix config show system
+```
+
+Local evidence: with Determinate Nix 3.8.6 / Nix 2.30.2 this prints `x86_64-linux` without `--impure`.
+
+Implementation guidance for Build:
+
+- add a small helper that runs `nix config show system`, trims the output, rejects an empty value, and fails closed on command failure;
+- call that helper from `computeIdentity` and emit `system=<value>` instead of `system=default`;
+- do not use `nix eval --impure --expr builtins.currentSystem`;
+- keep using `nix flake metadata` for the flake content hash for now;
+- add/adjust tests around identity construction/system handling. If needed, factor identity rendering into a pure helper so tests do not need to invoke `nix`;
+- validate with `nix fmt` and `nix flake check`.
+
+## Build handoff: create `AGENTS.md`
+
+User requested Build write a repository `AGENTS.md`.
+
+Suggested content:
+
+- concise project summary: small Haskell CLI that reuses existing direnv approval only for equivalent, boring, Nix-backed `.envrc` files;
+- validation contract: run `nix fmt` and `nix flake check`; `nix flake check` is the source of truth;
+- architecture map: `src/DirenvNixAllow.hs`, `src/Main.hs`, `tests/Spec.hs`, and the key `nix/*.nix` files listed above;
+- trust/security rules: no separate trust database, direnv allow dir is source of truth, reject arbitrary shell snippets and `use flake --impure`, identity must include normalized `.envrc`, flake content hash, installable, system, and impurity flag;
+- external interface preference: prefer CLI interfaces over code/API interfaces over direct file interfaces when available, stable, and cheap enough; this is a preference, not an absolute rule;
+- current justified file-interface exception: reading direnv allow files to enumerate already allowed `.envrc` paths, because no known stable `direnv` CLI exposes that exact list;
+- known warnings: missing app `meta`, `system` rename warning, transient Nix store/cache messages, and local `aarch64-linux` omission are non-fatal unless behavior changes;
+- next implementation target: replace `system=default` with `nix config show system` as described above, with fail-closed behavior and no `--impure`.
+
+Keep `AGENTS.md` practical and short. Do not duplicate all of `docs/wip.md`; link or point to it for detailed handoff context.
 
 Potential future improvements:
 
 - add `meta` to app/package outputs if the warning becomes annoying;
-- replace `system=default` with an actual evaluated Nix system identity;
 - split installable refs from flake source refs before calling `nix flake metadata` so `.#devShell`-style installables do not confuse metadata lookup;
 - improve Bash hook compatibility with upstream direnv's full Bash hook behavior.
