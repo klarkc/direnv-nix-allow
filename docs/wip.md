@@ -153,22 +153,50 @@ Implementation guidance for Build:
 - add/adjust tests around identity construction/system handling. If needed, factor identity rendering into a pure helper so tests do not need to invoke `nix`;
 - validate with `nix fmt` and `nix flake check`.
 
-## Build handoff: create `AGENTS.md`
+## Completed handoff: `AGENTS.md`
 
-User requested Build write a repository `AGENTS.md`.
+Repository `AGENTS.md` was created in commit `05d9403`. It is now the concise agent-facing guide for this repository and links back here for detailed context.
 
-Suggested content:
+## Dotfiles handoff: install and enable `direnv-nix-allow`
 
-- concise project summary: small Haskell CLI that reuses existing direnv approval only for equivalent, boring, Nix-backed `.envrc` files;
-- validation contract: run `nix fmt` and `nix flake check`; `nix flake check` is the source of truth;
-- architecture map: `src/DirenvNixAllow.hs`, `src/Main.hs`, `tests/Spec.hs`, and the key `nix/*.nix` files listed above;
-- trust/security rules: no separate trust database, direnv allow dir is source of truth, reject arbitrary shell snippets and `use flake --impure`, identity must include normalized `.envrc`, flake content hash, installable, system, and impurity flag;
-- external interface preference: prefer CLI interfaces over code/API interfaces over direct file interfaces when available, stable, and cheap enough; this is a preference, not an absolute rule;
-- current justified file-interface exception: reading direnv allow files to enumerate already allowed `.envrc` paths, because no known stable `direnv` CLI exposes that exact list;
-- known warnings: missing app `meta`, `system` rename warning, transient Nix store/cache messages, and local `aarch64-linux` omission are non-fatal unless behavior changes;
-- next implementation target: replace `system=default` with `nix config show system` as described above, with fail-closed behavior and no `--impure`.
+User requested a handoff for another agent implementing `direnv-nix-allow` in the user's dotfiles.
 
-Keep `AGENTS.md` practical and short. Do not duplicate all of `docs/wip.md`; link or point to it for detailed handoff context.
+Goal for the dotfiles agent:
+
+- make the `direnv-nix-allow` executable available in interactive shells;
+- wire the Bash hook so `direnv-nix-allow materialize --quiet` runs before `direnv export bash`;
+- preserve direnv as the authority for trust writes (`direnv allow` remains the only write path);
+- avoid adding any separate trust database, auto-allow policy, or broad `.envrc` approval logic in dotfiles.
+
+Recommended implementation shape:
+
+1. Add this repository as a dotfiles flake input or otherwise expose its `packages.<system>.default` output in the user's package set.
+2. Add the package to the user's interactive shell environment so `command -v direnv-nix-allow` succeeds.
+3. For Bash, replace the normal direnv Bash hook with this tool's wrapper:
+
+   ```sh
+   eval "$(direnv-nix-allow hook bash)"
+   ```
+
+   Do not also install `eval "$(direnv hook bash)"` in the same shell, because the wrapper already calls `direnv export bash`.
+4. Keep normal `direnv` installed/enabled. This tool depends on the `direnv` CLI for materializing approval and on the `nix` CLI for identity facts.
+5. If the user's dotfiles primarily target a non-Bash shell, pause and design shell-specific behavior first. This repository currently exposes only `hook bash`.
+
+Acceptance criteria for dotfiles integration:
+
+- A new interactive Bash shell has both `direnv` and `direnv-nix-allow` on `PATH`.
+- `direnv-nix-allow help` prints usage.
+- `direnv-nix-allow hook bash` prints a hook that defines `_direnv_nix_allow_hook` and calls `direnv export bash`.
+- There is no duplicate plain `direnv hook bash` installation in Bash startup files.
+- In a boring Nix-backed project, `direnv-nix-allow identity` prints an identity; in a non-boring `.envrc`, it fails closed rather than approving anything.
+- Existing manually approved direnv workflows continue to work unchanged.
+
+Risks / edge cases for the dotfiles agent:
+
+- Hook ordering matters: the wrapper should run where the normal direnv Bash hook would have run.
+- The current identity still emits `system=default` until the next implementation target below is completed; dotfiles integration should not paper over that in shell code.
+- Avoid enabling this for shells that are not supported by the repository hook unless a shell-specific hook is implemented here first.
+- Do not read or mutate direnv allow files from dotfiles; this repository handles that internally.
 
 Potential future improvements:
 
